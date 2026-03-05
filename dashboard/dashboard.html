@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MacroFlow Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+    <div class="layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="logo-icon"></div>
+                <h2>MacroFlow</h2>
+            </div>
+            
+            <div class="ai-generator card">
+                <h3><span class="icon">✨</span> AI Action Builder</h3>
+                <p>Describe your task to auto-generate a macro.</p>
+                <textarea id="aiPrompt" placeholder="e.g. Go to github.com and click 'Sign up'"></textarea>
+                <button id="generateBtn" class="btn btn-magic">Generate</button>
+                <div id="aiStatus" class="status-text hidden">Processing with Gemini...</div>
+                <div id="apiKeyWarning" class="warning-text hidden">API Key missing in .env</div>
+            </div>
+
+            <div class="macro-list-container card">
+                <h3>Your Library</h3>
+                <div id="macroList" class="macro-list">
+                    <!-- Javascript populates this list -->
+                </div>
+                <div style="margin-top: 16px;">
+                  <button id="btn-edit-shortcuts" class="btn btn-outline" style="width: 100%; font-size: 12px; padding: 8px;">⌨️ Configure Shortcuts</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Editor Area -->
+        <main class="editor-area">
+            <header class="editor-header">
+                <div class="title-group">
+                    <input type="text" id="macroNameInput" class="macro-title-input" placeholder="Select a macro to view" disabled>
+                    <span id="stepCounterBadge" class="badge hidden">0 steps</span>
+                </div>
+                <div class="header-actions">
+                    <select id="macro-shortcut" class="shortcut-select">
+                      <option value="">No Shortcut</option>
+                      <!-- Populated via JS -->
+                    </select>
+                      <button id="deleteMacroBtn" class="btn btn-danger" disabled title="Delete Macro">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                      </button>
+                      <button id="addStepBtn" class="btn btn-ghost" disabled>+ Add Step</button>
+                     <button id="saveBtn" class="btn btn-primary" disabled>Save</button>
+                     <button id="exportBtn" class="btn btn-outline" disabled>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        Export Extension
+                     </button>
+                </div>
+            </header>
+            
+            <div id="stepsContainer" class="steps-container">
+                 <div class="empty-editor">
+                    <div class="empty-icon">⌨️</div>
+                    <p>Select a macro from the sidebar to view its steps.</p>
+                 </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="../utils/jszip.min.js"></script>
+    <script type="module" src="dashboard.js"></script>
+</body>
+</html>

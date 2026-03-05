@@ -1,0 +1,56 @@
+{
+  "manifest_version": 3,
+  "name": "MacroFlow",
+  "version": "1.0",
+  "description": "Record once, run forever. Web automation studio powered by AI.",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background/background.js"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "assets/icon16.png",
+      "48": "assets/icon48.png",
+      "128": "assets/icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content/recorder.js", "content/player.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "commands": {
+    "slot-1": {
+      "suggested_key": { "default": "Alt+1" },
+      "description": "Trigger Macro Shortcut 1"
+    },
+    "slot-2": {
+      "suggested_key": { "default": "Alt+2" },
+      "description": "Trigger Macro Shortcut 2"
+    },
+    "slot-3": {
+      "suggested_key": { "default": "Alt+3" },
+      "description": "Trigger Macro Shortcut 3"
+    },
+    "slot-4": {
+      "suggested_key": { "default": "Alt+4" },
+      "description": "Trigger Macro Shortcut 4"
+    }
+  },
+  "icons": {
+    "16": "assets/icon16.png",
+    "48": "assets/icon48.png",
+    "128": "assets/icon128.png"
+  }
+}
