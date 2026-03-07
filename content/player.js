@@ -58,19 +58,69 @@
   async function waitForElement(selector, timeout = 5000) {
     if (!selector) throw new Error("No selector provided for this step");
     
+    const getEl = () => {
+      if (selector.startsWith('text=')) {
+        const rawTextFind = selector.substring(5);
+        const textToFind = rawTextFind.toLowerCase().trim();
+        const elements = document.querySelectorAll('button, a, span, div, li, [role="menuitem"], [class*="menuitem"], [class*="button"]');
+        
+        let bestMatch = null;
+        let bestScore = Infinity; // Lower is better
+
+        for (const el of elements) {
+          // Replace non-breaking spaces with normal spaces
+          const rawText = el.textContent.replace(/\u00A0/g, ' ').trim();
+          const text = rawText.toLowerCase();
+          
+          if (!text) continue;
+
+          if (text.includes(textToFind)) {
+            const rect = el.getBoundingClientRect();
+            // Check visibility
+            if (rect.width > 0 && rect.height > 0) {
+              
+              let score = Infinity;
+              
+              if (text === textToFind) {
+                // Perfect exact match (ignoring case)
+                score = 0;
+              } else if (text.startsWith(textToFind) || text.endsWith(textToFind)) {
+                 // Good match, but attached to something else
+                 score = text.length - textToFind.length;
+              } else {
+                 // Contains match
+                 score = (text.length - textToFind.length) + 1000;
+              }
+              
+              if (score < bestScore) {
+                bestScore = score;
+                bestMatch = el;
+              }
+            }
+          }
+        }
+        return bestMatch;
+      }
+      try {
+        return document.querySelector(selector);
+      } catch (e) {
+        return null;
+      }
+    };
+    
     return new Promise((resolve, reject) => {
-      let el = document.querySelector(selector);
+      let el = getEl();
       if (el) return resolve(el);
       
       const observer = new MutationObserver(() => {
-        el = document.querySelector(selector);
+        el = getEl();
         if (el) {
           observer.disconnect();
           resolve(el);
         }
       });
       
-      observer.observe(document.body, { childList: true, subtree: true });
+      observer.observe(document.body, { childList: true, subtree: true, attributes: true, characterData: true });
       
       setTimeout(() => {
         observer.disconnect();

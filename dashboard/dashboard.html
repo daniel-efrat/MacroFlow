@@ -15,13 +15,36 @@
                 <h2>MacroFlow</h2>
             </div>
             
+            <div class="auth-container card">
+                <h3><span class="icon">👤</span> Account (Optional)</h3>
+                <div id="loggedOutView">
+                    <input type="email" id="authEmail" class="step-input" placeholder="Email" style="width: 100%; margin-bottom: 8px;">
+                    <input type="password" id="authPassword" class="step-input" placeholder="Password" style="width: 100%; margin-bottom: 12px;">
+                    <div style="display: flex; gap: 8px;">
+                        <button id="loginBtn" class="btn btn-primary" style="flex: 1; padding: 6px;">Login</button>
+                        <button id="signupBtn" class="btn btn-outline" style="flex: 1; padding: 6px;">Sign Up</button>
+                    </div>
+                </div>
+                <div id="loggedInView" class="hidden">
+                    <p id="userEmailDisplay" style="font-size: 0.85rem; color: var(--text-muted); word-break: break-all; margin: 0 0 12px 0;"></p>
+                    <button id="logoutBtn" class="btn btn-outline" style="width: 100%; padding: 6px;">Logout</button>
+                </div>
+                <div id="authStatus" class="status-text hidden" style="margin-top: 8px;"></div>
+            </div>
+            
             <div class="ai-generator card">
                 <h3><span class="icon">✨</span> AI Action Builder</h3>
                 <p>Describe your task to auto-generate a macro.</p>
                 <textarea id="aiPrompt" placeholder="e.g. Go to github.com and click 'Sign up'"></textarea>
+                
+                <div class="api-key-container" style="margin-bottom: 12px;">
+                    <input type="password" id="customApiKey" placeholder="sk-..." class="step-input" style="width: 100%; border: 1px solid #334155; border-radius: 6px; padding: 8px; font-size: 13px; background: rgba(0,0,0,0.2); color: #f8fafc;" title="Enter your Gemini API Key">
+                    <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">Custom Gemini API Key (saved locally)</div>
+                </div>
+
                 <button id="generateBtn" class="btn btn-magic">Generate</button>
                 <div id="aiStatus" class="status-text hidden">Processing with Gemini...</div>
-                <div id="apiKeyWarning" class="warning-text hidden">API Key missing in .env</div>
+                <div id="apiKeyWarning" class="warning-text hidden">API Key missing</div>
             </div>
 
             <div class="macro-list-container card">
@@ -69,6 +92,7 @@
     </div>
     
     <script src="../utils/jszip.min.js"></script>
+    <script src="../utils/error_logger.js"></script>
     <script type="module" src="dashboard.js"></script>
 </body>
 </html>

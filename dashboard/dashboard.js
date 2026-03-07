@@ -1,8 +1,11 @@
-// dashboard.js
+console.log('!!!!!!! DASHBOARD.JS TOP-LEVEL EXECUTION STARTED !!!!!!!');
+alert('DASHBOARD.JS HAS STARTED EXECUTING! If you see this, JS is working.');
+
+import { supabase } from '../utils/supabase.js';
 import { generateMacroFromQuery } from '../utils/gemini.js';
 import { exportMacroToExtension } from '../utils/exporter.js';
 
-document.addEventListener('DOMContentLoaded', () => {
+(async () => {
   const macroListEl = document.getElementById('macroList');
   const macroNameInput = document.getElementById('macroNameInput');
   const stepCounterBadge = document.getElementById('stepCounterBadge');
@@ -13,17 +16,101 @@ document.addEventListener('DOMContentLoaded', () => {
   const generateBtn = document.getElementById('generateBtn');
   const aiPrompt = document.getElementById('aiPrompt');
   const aiStatus = document.getElementById('aiStatus');
+  const apiKeyWarning = document.getElementById('apiKeyWarning');
+  const customApiKeyInput = document.getElementById('customApiKey');
   const exportBtn = document.getElementById('exportBtn');
   const shortcutSelectEl = document.getElementById('macro-shortcut');
   const btnEditShortcuts = document.getElementById('btn-edit-shortcuts');
   
+  // Auth DOM
+  const loggedOutView = document.getElementById('loggedOutView');
+  const loggedInView = document.getElementById('loggedInView');
+  const authEmail = document.getElementById('authEmail');
+  const authPassword = document.getElementById('authPassword');
+  const loginBtn = document.getElementById('loginBtn');
+  const signupBtn = document.getElementById('signupBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const userEmailDisplay = document.getElementById('userEmailDisplay');
+  const authStatus = document.getElementById('authStatus');
+
   let macros = [];
   let currentMacro = null;
   let draggedStepIndex = null;
+  let isExecutingLoadMacros = false;
 
   // Init
+  shortcutSelectEl.disabled = true;
+  chrome.storage.local.get(['customApiKey'], (res) => {
+    if (res.customApiKey) customApiKeyInput.value = res.customApiKey;
+  });
+
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    console.log('[MacroFlow] Auth Event:', event, 'Session details:', session ? session.user.email : 'None');
+    if (session) {
+      loggedOutView.classList.add('hidden');
+      loggedInView.classList.remove('hidden');
+      userEmailDisplay.textContent = `${session.user.email}`;
+      await loadMacros(); // Reload macros when logging in
+    } else {
+      loggedOutView.classList.remove('hidden');
+      loggedInView.classList.add('hidden');
+      await loadMacros(); // Reload macros when logging out
+    }
+  });
+
+  async function handleAuth(action) {
+    const email = authEmail.value.trim();
+    const password = authPassword.value.trim();
+    if (!email || !password) return showAuthStatus('Enter email & password', true);
+
+    loginBtn.disabled = true;
+    signupBtn.disabled = true;
+    showAuthStatus('Processing...', false);
+
+    const { error } = action === 'login' 
+      ? await supabase.auth.signInWithPassword({ email, password })
+      : await supabase.auth.signUp({ email, password });
+
+    loginBtn.disabled = false;
+    signupBtn.disabled = false;
+
+    if (error) {
+      showAuthStatus(error.message, true);
+    } else {
+      authStatus.classList.add('hidden');
+    }
+  }
+
+  function showAuthStatus(msg, isError) {
+    authStatus.textContent = msg;
+    authStatus.className = 'status-text ' + (isError ? 'warning-text' : '');
+    authStatus.classList.remove('hidden');
+  }
+
+  loginBtn.addEventListener('click', () => handleAuth('login'));
+  signupBtn.addEventListener('click', () => handleAuth('signup'));
+  logoutBtn.addEventListener('click', async () => {
+    console.log('[MacroFlow] Logout button clicked');
+    try {
+      const { error } = await supabase.auth.signOut();
+      console.log('[MacroFlow] Logout API result:', error ? error.message : 'Success');
+      if (error) throw error;
+      // Force reload UI if the listener fails to trigger
+      loggedOutView.classList.remove('hidden');
+      loggedInView.classList.add('hidden');
+    } catch (e) {
+      console.error('[MacroFlow] Logout exception:', e);
+      alert('Logout failed: ' + e.message);
+    }
+  });
+
   loadMacros();
   loadCommands();
+
+  // Event Listeners
+  customApiKeyInput.addEventListener('input', (e) => {
+    chrome.storage.local.set({ customApiKey: e.target.value.trim() });
+  });
 
   // Event Listeners
   btnEditShortcuts.addEventListener('click', () => {
@@ -31,9 +118,57 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   async function loadMacros() {
-    const result = await chrome.storage.local.get(['macros']);
-    macros = result.macros || [];
-    renderSidebar();
+    if (isExecutingLoadMacros) return;
+    isExecutingLoadMacros = true;
+    try {
+      const { data: { session }, error: sessionErr } = await supabase.auth.getSession();
+      
+      if (session) {
+        const { data, error } = await supabase
+          .from('macros')
+          .select('*')
+          .order('created_at', { ascending: false });
+          
+        if (!error && data) {
+          const remoteMacros = data.map(m => ({
+            id: m.id,
+            name: m.name,
+            steps: m.steps,
+            createdAt: new Date(m.created_at).getTime(),
+            triggers: m.triggers || []
+          }));
+          const { macros: localMacros = [] } = await chrome.storage.local.get(['macros']);
+          
+          // Merge: take remote macros, and append local ones that aren't synced yet (offline IDs are timestamps)
+          const remoteIds = new Set(remoteMacros.map(m => m.id));
+          const unsyncedLocal = localMacros.filter(m => !remoteIds.has(m.id) && !String(m.id).includes('-'));
+          
+          macros = [...remoteMacros, ...unsyncedLocal];
+          macros.sort((a, b) => b.createdAt - a.createdAt);
+          
+          await chrome.storage.local.set({ macros });
+        } else {
+          console.error('[MacroFlow] Supabase fetch error:', error);
+          // Force logout if JWT is expired so UI updates accordingly
+          if (error && error.message && error.message.toLowerCase().includes('jwt')) {
+             console.log('[MacroFlow] JWT expired. Forcing sign out.');
+             await supabase.auth.signOut();
+             window.location.reload();
+             return;
+          }
+          const result = await chrome.storage.local.get(['macros']);
+          macros = result.macros || [];
+        }
+      } else {
+        console.log('[MacroFlow] No session. Falling back to simple local get.');
+        const result = await chrome.storage.local.get(['macros']);
+        macros = result.macros || [];
+      }
+      console.log('[MacroFlow] Final macros array length:', macros.length, 'Rendering sidebar...');
+      renderSidebar();
+    } finally {
+      isExecutingLoadMacros = false;
+    }
   }
 
   async function loadCommands() {
@@ -87,6 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
     exportBtn.disabled = false;
     deleteMacroBtn.disabled = false;
     addStepBtn.disabled = false;
+    shortcutSelectEl.disabled = false;
     
     renderEditor();
   }
@@ -232,10 +368,41 @@ document.addEventListener('DOMContentLoaded', () => {
       currentMacro.triggers = [];
     }
     
+    const { data: { session } } = await supabase.auth.getSession();
+    let oldId = currentMacro.id;
+    if (session) {
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(currentMacro.id);
+      
+      const payload = {
+        user_id: session.user.id,
+        name: currentMacro.name,
+        steps: currentMacro.steps,
+        triggers: currentMacro.triggers
+      };
+      if (isUUID) {
+        payload.id = currentMacro.id;
+      }
+
+      const { data, error } = await supabase
+        .from('macros')
+        .upsert(payload)
+        .select()
+        .single();
+        
+      if (!error && data) {
+        currentMacro.id = data.id;
+        currentMacro.createdAt = new Date(data.created_at).getTime();
+      } else {
+        console.error('Supabase save error:', error);
+      }
+    }
+
     // Update local references
-    const index = macros.findIndex(m => m.id === currentMacro.id);
+    const index = macros.findIndex(m => m.id === oldId);
     if (index > -1) {
       macros[index] = currentMacro;
+    } else {
+      macros.push(currentMacro);
     }
     
     await chrome.storage.local.set({ macros });
@@ -258,6 +425,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const confirmed = confirm(`Are you sure you want to delete "${currentMacro.name}"?`);
     if (!confirmed) return;
 
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(currentMacro.id);
+      if (isUUID) {
+         await supabase.from('macros').delete().eq('id', currentMacro.id);
+      }
+    }
+
     // Remove from array
     macros = macros.filter(m => m.id !== currentMacro.id);
     
@@ -273,6 +448,7 @@ document.addEventListener('DOMContentLoaded', () => {
     exportBtn.disabled = true;
     deleteMacroBtn.disabled = true;
     addStepBtn.disabled = true;
+    shortcutSelectEl.disabled = true;
     
     stepsContainer.innerHTML = `
       <div class="empty-editor">
@@ -295,13 +471,32 @@ document.addEventListener('DOMContentLoaded', () => {
       
       const generatedSteps = await generateMacroFromQuery(query);
       
-      const newMacro = {
+      let newMacro = {
         id: Date.now().toString(),
         name: `AI: ${query.substring(0, 20)}...`,
         steps: generatedSteps,
         createdAt: Date.now(),
         triggers: []
       };
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const { data, error } = await supabase
+          .from('macros')
+          .insert({
+            user_id: session.user.id,
+            name: newMacro.name,
+            steps: newMacro.steps,
+            triggers: newMacro.triggers
+          })
+          .select()
+          .single();
+          
+        if (!error && data) {
+          newMacro.id = data.id;
+          newMacro.createdAt = new Date(data.created_at).getTime();
+        }
+      }
       
       macros.push(newMacro);
       await chrome.storage.local.set({ macros });
@@ -346,8 +541,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function escapeHTML(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
-});
+})();

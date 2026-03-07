@@ -187,7 +187,49 @@ if (!window.macroRecorderLoaded) {
 function getOptimalSelector(el) {
   if (el.tagName.toLowerCase() === "html") return "html";
   
-  if (el.id) {
+  // 1. Try robust attributes (often stable across sessions on dynamic sites like Google Docs)
+  const attrs = ['data-testid', 'data-id', 'aria-label', 'name', 'placeholder'];
+  for (let attr of attrs) {
+    if (el.hasAttribute(attr)) {
+      const val = el.getAttribute(attr);
+      if (val) {
+        const sel = `${el.tagName.toLowerCase()}[${attr}="${CSS.escape(val)}"]`;
+        try {
+          if (document.querySelectorAll(sel).length === 1) return sel;
+        } catch(e) {}
+      }
+    }
+  }
+
+  // 2. Try unique text content (very robust for dynamic menus)
+  const text = el.textContent.replace(/\u00A0/g, ' ').trim();
+  if (text && text.length > 0 && text.length < 50) {
+    const hasSpecialClass = typeof el.className === 'string' && (el.className.includes('menuitem') || el.className.includes('button'));
+    const validTag = ['BUTTON', 'A', 'SPAN', 'DIV', 'LI'].includes(el.tagName) || el.hasAttribute('role') || hasSpecialClass;
+    
+    if (validTag) {
+      const textToFind = text.toLowerCase();
+      const elements = document.querySelectorAll('button, a, span, div, li, [role="menuitem"], [class*="menuitem"], [class*="button"]');
+      let matches = 0;
+      for (const element of elements) {
+         const elText = element.textContent.replace(/\u00A0/g, ' ').trim().toLowerCase();
+         if (elText === textToFind) {
+            const rect = element.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) matches++;
+         }
+      }
+      
+      // Because a button and its child span might both have the identical textContent, 
+      // matches will often be 2 or 3. player.js has a scoring system to pick the best one.
+      // We just want to avoid generic text like "1" that matches 50 table cells.
+      if (matches >= 1 && matches <= 5) {
+        return `text=${text}`;
+      }
+    }
+  }
+
+  // 3. Fallback to ID
+  if (el.id && !el.id.includes(':') && !/^[0-9]/.test(el.id)) {
     // Check if ID is strictly unique
     try {
       if (document.querySelectorAll(`#${CSS.escape(el.id)}`).length === 1) {
@@ -202,7 +244,7 @@ function getOptimalSelector(el) {
   while (currentEl && currentEl.nodeType === Node.ELEMENT_NODE) {
     let selector = currentEl.nodeName.toLowerCase();
     
-    if (currentEl.id) {
+    if (currentEl.id && !currentEl.id.includes(':') && !/^[0-9]/.test(currentEl.id)) {
       try {
         let idSelector = `#${CSS.escape(currentEl.id)}`;
         if (document.querySelectorAll(idSelector).length === 1) {
@@ -266,16 +308,30 @@ function flushTypeBuffer() {
 document.addEventListener('click', (e) => {
   if (!isRecording) return;
   
+  // Ignore clicks on our own overlay
+  if (e.target && e.target.closest && e.target.closest('#macroflow-recording-overlay')) return;
+  
   // Flush any pending type action before a click occurs
   flushTypeBuffer();
   
-  const selector = getOptimalSelector(e.target);
+  let targetNode = e.target;
+  if (targetNode && targetNode.closest) {
+    const interactive = targetNode.closest('button, a, input, select, textarea, [role="button"], [role="menuitem"], [role="tab"], [role="option"], [class*="button"], [class*="menuitem"]');
+    if (interactive) {
+       targetNode = interactive;
+    }
+  }
+
+  const selector = getOptimalSelector(targetNode);
   recordStep('click', selector);
   
 }, true); // use capture phase
 
 document.addEventListener('keydown', (e) => {
   if (!isRecording) return;
+
+  // Ignore keystrokes on our own overlay (like the macro prompt)
+  if (e.target && e.target.closest && e.target.closest('#macroflow-recording-overlay')) return;
 
   // Ignore specialized keys for typing if they aren't characters
   // E.g., Shift, Ctrl, Alt (We might want to support Enter later, but keeping simple for now)

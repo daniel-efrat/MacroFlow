@@ -1,5 +1,6 @@
 // background.js
 // Service Worker to manage state, storage, and cross-extension communication
+import { supabase } from '../utils/supabase.js';
 
 let isRecording = false;
 let currentMacroSteps = [];
@@ -93,14 +94,34 @@ async function saveMacro(name, steps) {
   const result = await chrome.storage.local.get(['macros']);
   const macros = result.macros || [];
   
-  macros.push({
+  let newMacro = {
     id: Date.now().toString(),
     name,
     steps,
     createdAt: Date.now(),
-    triggers: [] // For shortcuts or auto-run rules
-  });
-  
+    triggers: [] 
+  };
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) {
+    const { data, error } = await supabase
+      .from('macros')
+      .insert({
+        user_id: session.user.id,
+        name: newMacro.name,
+        steps: newMacro.steps,
+        triggers: newMacro.triggers
+      })
+      .select()
+      .single();
+      
+    if (!error && data) {
+      newMacro.id = data.id;
+      newMacro.createdAt = new Date(data.created_at).getTime();
+    }
+  }
+
+  macros.push(newMacro);
   await chrome.storage.local.set({ macros });
 }
 

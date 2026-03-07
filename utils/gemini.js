@@ -1,12 +1,14 @@
 import { config } from './config.js';
 
-const API_KEY = config.GEMINI_API_KEY;
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
-
 export async function generateMacroFromQuery(query) {
-  if (!API_KEY) {
-    throw new Error('Gemini API key is missing. Check .env');
+  const result = await chrome.storage.local.get(['customApiKey']);
+  const apiKey = result.customApiKey || config.GEMINI_API_KEY;
+
+  if (!apiKey) {
+    throw new Error('Gemini API key is missing. Please enter it in the dashboard.');
   }
+
+  const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
   const prompt = `
   You are an expert web automation assistant for the "MacroFlow" Chrome Extension.
@@ -15,7 +17,8 @@ export async function generateMacroFromQuery(query) {
   The JSON format MUST be:
   [
     { "action": "navigate", "target": "", "value": "https://example.com" },
-    { "action": "click", "target": "#button-id", "value": "" },
+    { "action": "click", "target": "text=Format", "value": "" },
+    { "action": "click", "target": "span[aria-label='Text']", "value": "" },
     { "action": "type", "target": "input[name='q']", "value": "search query" },
     { "action": "wait", "target": "", "value": "2000" }
   ]
@@ -23,8 +26,9 @@ export async function generateMacroFromQuery(query) {
   Rules:
   1. ONLY return the raw JSON array. NO MARKDOWN, NO EXPLANATIONS.
   2. Use "navigate" for going to URLs (put URL in "value").
-  3. Use standard CSS selectors for "target" in click/type actions. Guess the most likely logical selector.
-  4. Always add a small "wait" action (e.g., 2000) after navigation or major changes if it makes sense.
+  3. For "target" in click/type actions, prioritize text matching (e.g., "text=File") OR stable accessibility attributes (e.g., "span[aria-label='Text']", "[data-testid='submit']").
+  4. Avoid guessing brittle generic IDs (like "#button" or "#submit") unless strictly necessary.
+  5. Always add a small "wait" action (e.g., 2000) after navigation or major changes if it makes sense.
 
   User Request: "${query}"
   `;

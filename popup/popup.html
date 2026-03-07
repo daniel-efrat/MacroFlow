@@ -20,6 +20,19 @@
         </header>
 
         <main>
+            <div id="authPromptState" class="state-panel" style="gap: 8px;">
+                <h3 style="margin: 0;">Cloud Sync</h3>
+                <p style="font-size: 0.85rem; color: var(--text-muted); text-align: center; margin-top: 0; margin-bottom: 8px;">Log in to sync your macros, or skip to save locally.</p>
+                <input type="email" id="popupAuthEmail" style="width: 100%; background: rgba(15, 23, 42, 0.5); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; color: var(--text-main); font-size: 0.85rem; outline: none;" placeholder="Email">
+                <input type="password" id="popupAuthPassword" style="width: 100%; background: rgba(15, 23, 42, 0.5); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; color: var(--text-main); font-size: 0.85rem; outline: none; margin-bottom: 4px;" placeholder="Password">
+                <div style="display: flex; gap: 8px; width: 100%;">
+                    <button id="popupLoginBtn" class="btn btn-primary" style="flex: 1; padding: 8px;">Login</button>
+                    <button id="popupSignupBtn" class="btn btn-outline" style="flex: 1; padding: 8px;">Sign Up</button>
+                </div>
+                <button id="popupSkipBtn" class="btn" style="background: transparent; color: var(--text-muted); border: 1px dashed var(--border); width: 100%; margin-top: 4px; padding: 8px;">Skip for now</button>
+                <div id="popupAuthStatus" class="status-text hidden" style="margin-top: 4px;"></div>
+            </div>
+
             <div id="defaultState" class="state-panel active">
                 <button id="startRecordBtn" class="btn btn-record">
                     <span class="dot"></span> Record Macro
@@ -39,6 +52,6 @@
             </div>
         </main>
     </div>
-    <script src="popup.js"></script>
+    <script type="module" src="popup.js"></script>
 </body>
 </html>

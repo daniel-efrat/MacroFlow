@@ -47,11 +47,12 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .shortcut-select {
-  background: var(--surface-light);
-  color: var(--text);
+  background: var(--panel-bg);
+  color: var(--text-main);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 8px 12px;
@@ -60,6 +61,11 @@ body {
   cursor: pointer;
   outline: none;
   transition: all 0.2s;
+}
+
+.shortcut-select option {
+  background: var(--panel-bg);
+  color: var(--text-main);
 }
 
 .shortcut-select:focus {
@@ -233,13 +239,16 @@ textarea:focus {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
 .title-group {
   display: flex;
   align-items: center;
   gap: 16px;
-  flex: 1;
+  flex: 1 1 200px;
+  min-width: 0;
 }
 
 .macro-title-input {
@@ -254,6 +263,8 @@ textarea:focus {
   font-family: inherit;
   transition: border-bottom 0.2s;
   border-bottom: 2px solid transparent;
+  min-width: 0;
+  text-overflow: ellipsis;
 }
 
 .macro-title-input:not(:disabled):focus {
@@ -393,4 +404,65 @@ textarea:focus {
 @keyframes pulseOpacity {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
+}
+
+/* Responsiveness */
+@media (max-width: 768px) {
+  body {
+    height: auto;
+    overflow: auto;
+    min-height: 100vh;
+  }
+
+  .layout {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding: 16px;
+    height: auto;
+  }
+
+  .macro-list-container {
+    max-height: 300px;
+    flex: none;
+  }
+
+  .editor-area {
+    min-height: 60vh;
+  }
+
+  .editor-header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .title-group {
+    width: 100%;
+  }
+
+  .header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .macro-title-input {
+    font-size: 1.25rem;
+  }
+
+  .steps-container {
+    padding: 16px;
+  }
+
+  .step-content {
+    flex-direction: column;
+    gap: 12px;
+  }
 }
