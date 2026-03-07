@@ -1,8 +1,6 @@
-import { config } from './config.js';
-
 export async function generateMacroFromQuery(query) {
   const result = await chrome.storage.local.get(['customApiKey']);
-  const apiKey = result.customApiKey || config.GEMINI_API_KEY;
+  const apiKey = result.customApiKey;
 
   if (!apiKey) {
     throw new Error('Gemini API key is missing. Please enter it in the dashboard.');

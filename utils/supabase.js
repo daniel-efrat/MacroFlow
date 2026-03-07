@@ -24,8 +24,8 @@ const storageAdapter = {
   }
 };
 
-const supabaseUrl = 'https://syekbizdrsbysuxkdbko.supabase.co';
-const supabaseKey = 'sb_publishable_klpYj95vCJtHT9wTcXoOrQ_GFr7gjX3';
+const supabaseUrl = typeof process !== 'undefined' ? process.env.SUPABASE_URL : 'YOUR_SUPABASE_URL_HERE';
+const supabaseKey = typeof process !== 'undefined' ? process.env.SUPABASE_KEY : 'YOUR_SUPABASE_KEY_HERE';
 
 const localMutexes = {};
 
