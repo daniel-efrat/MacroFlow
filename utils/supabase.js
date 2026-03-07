@@ -24,8 +24,10 @@ const storageAdapter = {
   }
 };
 
-const supabaseUrl = typeof process !== 'undefined' ? process.env.SUPABASE_URL : 'YOUR_SUPABASE_URL_HERE';
-const supabaseKey = typeof process !== 'undefined' ? process.env.SUPABASE_KEY : 'YOUR_SUPABASE_KEY_HERE';
+import { SUPABASE_URL, SUPABASE_KEY } from './env.js';
+
+const supabaseUrl = SUPABASE_URL;
+const supabaseKey = SUPABASE_KEY;
 
 const localMutexes = {};
 
